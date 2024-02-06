@@ -10,6 +10,12 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: ${hm.db.pw}
+  rabbitmq:
+    host: 172.23.129.20
+    port: 5672
+    virtual-host: /hmall
+    username: hmall
+    password: 123
 mybatis-plus:
   configuration:
     default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler

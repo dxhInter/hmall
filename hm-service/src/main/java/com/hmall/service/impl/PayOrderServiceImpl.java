@@ -16,6 +16,9 @@ import com.hmall.service.IOrderService;
 import com.hmall.service.IPayOrderService;
 import com.hmall.service.IUserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,11 +34,14 @@ import java.time.LocalDateTime;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PayOrderServiceImpl extends ServiceImpl<PayOrderMapper, PayOrder> implements IPayOrderService {
 
     private final IUserService userService;
 
     private final IOrderService orderService;
+
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     public String applyPayOrder(PayApplyDTO applyDTO) {
@@ -63,11 +69,16 @@ public class PayOrderServiceImpl extends ServiceImpl<PayOrderMapper, PayOrder> i
             throw new BizIllegalException("交易已支付或关闭！");
         }
         // 5.修改订单状态
-        Order order = new Order();
-        order.setId(po.getBizOrderNo());
-        order.setStatus(2);
-        order.setPayTime(LocalDateTime.now());
-        orderService.updateById(order);
+//        Order order = new Order();
+//        order.setId(po.getBizOrderNo());
+//        order.setStatus(2);
+//        order.setPayTime(LocalDateTime.now());
+//        orderService.updateById(order);
+        try {
+            rabbitTemplate.convertAndSend("pay.topic", "pay.success", po.getBizOrderNo());
+        } catch (AmqpException e) {
+            log.error("发送支付成功消息失败", e);
+        }
     }
 
     public boolean markPayOrderSuccess(Long id, LocalDateTime successTime) {
