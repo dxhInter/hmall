@@ -3,6 +3,7 @@ package com.hmall.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmall.common.exception.BadRequestException;
 import com.hmall.common.utils.UserContext;
+import com.hmall.domain.dto.CartDTO;
 import com.hmall.domain.dto.ItemDTO;
 import com.hmall.domain.dto.OrderDetailDTO;
 import com.hmall.domain.dto.OrderFormDTO;
@@ -14,14 +15,13 @@ import com.hmall.service.IItemService;
 import com.hmall.service.IOrderDetailService;
 import com.hmall.service.IOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +39,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final IItemService itemService;
     private final IOrderDetailService detailService;
     private final ICartService cartService;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     @Transactional
@@ -74,8 +75,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         detailService.saveBatch(details);
 
         // 3.清理购物车商品
-        cartService.removeByItemIds(itemIds);
-
+//        cartService.removeByItemIds(itemIds);
+        CartDTO cartDTO = new CartDTO();
+        cartDTO.setItemIds(itemIds);
+        cartDTO.setUserId(UserContext.getUser());
+        try {
+            rabbitTemplate.convertAndSend("trade.topic", "order.create", cartDTO);
+        } catch (AmqpException e){
+            log.error("清理购物车商品失败", e);
+        }
         // 4.扣减库存
         try {
             itemService.deductStock(detailDTOS);

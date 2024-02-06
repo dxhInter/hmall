@@ -21,7 +21,6 @@ public class PayStatusListener {
             key = "pay.success"
     ))
     public void listenOrderPay(Long orderId){
-        //
         orderService.markOrderPaySuccess(orderId);
     }
 }
