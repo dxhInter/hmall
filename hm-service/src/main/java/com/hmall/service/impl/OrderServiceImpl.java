@@ -1,5 +1,6 @@
 package com.hmall.service.impl;
 
+import com.baomidou.mybatisplus.extension.conditions.query.QueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmall.common.exception.BadRequestException;
 import com.hmall.common.utils.UserContext;
@@ -100,6 +101,26 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setStatus(2);
         order.setPayTime(LocalDateTime.now());
         updateById(order);
+    }
+
+    @Override
+    @Transactional
+    public void cancelOrder(Long orderId) {
+        lambdaUpdate()
+                .set(Order::getStatus, 5)
+                .set(Order::getCloseTime, LocalDateTime.now())
+                .eq(Order::getId, orderId)
+                .update();
+         // 退还库存
+        List<OrderDetail> orderDetails = detailService.query().eq("order_id", orderId).list();
+        List<OrderDetailDTO> detailDTOS = new ArrayList<>(orderDetails.size());
+        for (OrderDetail detail : orderDetails) {
+            OrderDetailDTO detailDTO = new OrderDetailDTO();
+            detailDTO.setItemId(detail.getItemId());
+            detailDTO.setNum(detail.getNum());
+            detailDTOS.add(detailDTO);
+        }
+        itemService.increaseStock(detailDTOS);
     }
 
     private List<OrderDetail> buildDetails(Long orderId, List<ItemDTO> items, Map<Long, Integer> numMap) {
