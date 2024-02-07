@@ -2,8 +2,11 @@ package com.hmall.service.impl;
 
 import com.baomidou.mybatisplus.extension.conditions.query.QueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hmall.common.domain.MultiDelayMessage;
 import com.hmall.common.exception.BadRequestException;
+import com.hmall.common.mq.DelayMessageProcessor;
 import com.hmall.common.utils.UserContext;
+import com.hmall.constants.MqConstants;
 import com.hmall.domain.dto.CartDTO;
 import com.hmall.domain.dto.ItemDTO;
 import com.hmall.domain.dto.OrderDetailDTO;
@@ -17,6 +20,8 @@ import com.hmall.service.IOrderDetailService;
 import com.hmall.service.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,6 +95,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             itemService.deductStock(detailDTOS);
         } catch (Exception e) {
             throw new RuntimeException("库存不足！");
+        }
+        // 延迟检查订单是否支付
+        try {
+            MultiDelayMessage<Long> msg = MultiDelayMessage.of(order.getId(), 10000L, 10000L, 10000L, 15000L, 15000L, 30000L);
+            rabbitTemplate.convertAndSend(MqConstants.DELAY_EXCHANGE, MqConstants.DELAY_ORDER_ROUTING_KEY, msg, new DelayMessageProcessor(msg.removeNextDelay().intValue()));
+        } catch (AmqpException e){
+            log.error("延迟检查订单是否支付失败", e);
         }
         return order.getId();
     }

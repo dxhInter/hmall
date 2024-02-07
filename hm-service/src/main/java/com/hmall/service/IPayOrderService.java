@@ -18,4 +18,8 @@ public interface IPayOrderService extends IService<PayOrder> {
     String applyPayOrder(PayApplyDTO applyDTO);
 
     void tryPayOrderByBalance(PayOrderFormDTO payOrderFormDTO);
+
+    PayOrder queryByBizOrderNo(Long bizOrderNo);
+
+    void cancelPayOrder(Long id);
 }
