@@ -1,5 +1,6 @@
 # 黑马商城
 此项目实现了虎哥文档里的一些练习题
+文档地址: https://b11et3un53m.feishu.cn/wiki/A9SawKUxsikJ6dk3icacVWb4n3g
 ## 实现改造下单功能，基于RabbitMQ的异步通知
 - 定义topic类型交换机，命名为```trade.topic```
 - 定义消息队列，命名为```cart.clear.queue```
